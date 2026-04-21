@@ -606,17 +606,30 @@ where
     Some((dp1[hi - lo - 1], Some(res)))
 }
 
-fn translate_str(chars: &mut Vec<char>, s: &str) -> Option<Vec<u8>> {
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub enum StrDecodeError {
+    TooManyUniqueCharacters,
+}
+
+impl fmt::Display for StrDecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Input string has over 256 unique characters")
+    }
+}
+
+impl std::error::Error for StrDecodeError {}
+
+fn translate_str(chars: &mut Vec<char>, s: &str) -> Result<Vec<u8>, StrDecodeError> {
     s.chars()
         .map(|c| match chars.iter().position(|&d| c == d) {
-            Some(i) => Some(i as u8),
+            Some(i) => Ok(i as u8),
             None => {
                 let idx = chars.len();
                 if idx < 256 {
                     chars.push(c);
-                    Some(idx as u8)
+                    Ok(idx as u8)
                 } else {
-                    None
+                    Err(StrDecodeError::TooManyUniqueCharacters)
                 }
             }
         })
@@ -630,23 +643,25 @@ fn translate_str(chars: &mut Vec<char>, s: &str) -> Option<Vec<u8>> {
 /// * `b` - second string (&str)
 /// * `k` - maximum number of edits allowed between `a` and `b`
 ///
+/// Returns an error if the string has over 256 unique characters.
+///
 /// # Example
 /// ```
 /// # use triple_accel::*;
 /// # use triple_accel::levenshtein::*;
 /// let dist = levenshtein_simd_k_str("abc", "ab", 1);
 ///
-/// assert!(dist.unwrap() == 1);
+/// assert!(dist.unwrap() == Some(1));
 /// ```
-pub fn levenshtein_simd_k_str(a: &str, b: &str, k: u32) -> Option<u32> {
+pub fn levenshtein_simd_k_str(a: &str, b: &str, k: u32) -> Result<Option<u32>, StrDecodeError> {
     if a.is_ascii() && b.is_ascii() {
-        levenshtein_simd_k(a.as_bytes(), b.as_bytes(), k)
+        Ok(levenshtein_simd_k(a.as_bytes(), b.as_bytes(), k))
     } else {
         let mut chars = Vec::with_capacity(256);
 
         let a = translate_str(&mut chars, a)?;
         let b = translate_str(&mut chars, b)?;
-        levenshtein_simd_k(&a, &b, k)
+        Ok(levenshtein_simd_k(&a, &b, k))
     }
 }
 
