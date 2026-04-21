@@ -41,7 +41,7 @@
 //! ## Limitations
 //!
 //! Due to the use of SIMD intrinsics, only binary strings that are represented with `u8` bytes
-//! are supported. Unicode strings are not currently supported.
+//! are supported. Unicode strings with over 256 unique characters are not currently supported.
 //!
 //! ## Notation
 //!
